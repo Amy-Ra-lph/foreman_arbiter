@@ -1,0 +1,112 @@
+<div class="tab-pane" id="attestation">
+  <% latest = @host.latest_attestation %>
+
+  <% if latest %>
+    <div class="row">
+      <div class="col-md-6">
+        <table class="table table-bordered table-condensed">
+          <tr>
+            <th><%= _('Attestation State') %></th>
+            <td>
+              <% case latest.arbiter_state %>
+              <% when 'HEALTHY' %>
+                <span class="label label-success"><%= latest.arbiter_state %></span>
+              <% when 'FAILED', 'REVOKED' %>
+                <span class="label label-danger"><%= latest.arbiter_state %></span>
+              <% when 'ATTESTING', 'STALE', 'UNDER_REMEDIATION' %>
+                <span class="label label-warning"><%= latest.arbiter_state %></span>
+              <% else %>
+                <span class="label label-default"><%= latest.arbiter_state %></span>
+              <% end %>
+            </td>
+          </tr>
+          <tr>
+            <th><%= _('Composite Verdict') %></th>
+            <td>
+              <% if latest.passed? %>
+                <span class="label label-success">PASS</span>
+              <% elsif latest.failed? %>
+                <span class="label label-danger">FAIL</span>
+              <% else %>
+                <span class="label label-default"><%= latest.composite_verdict %></span>
+              <% end %>
+            </td>
+          </tr>
+          <tr>
+            <th><%= _('Last Attested') %></th>
+            <td><%= latest.received_at&.strftime('%Y-%m-%d %H:%M:%S UTC') %></td>
+          </tr>
+          <tr>
+            <th><%= _('Workload ID') %></th>
+            <td><code><%= latest.arbiter_workload_id %></code></td>
+          </tr>
+        </table>
+      </div>
+      <div class="col-md-6">
+        <h4><%= _('Per-Backend Results') %></h4>
+        <table class="table table-bordered table-condensed">
+          <thead>
+            <tr><th><%= _('Backend') %></th><th><%= _('Verdict') %></th></tr>
+          </thead>
+          <tbody>
+            <% (latest.per_backend || []).each do |result| %>
+              <tr>
+                <td><%= result['backend'] %></td>
+                <td>
+                  <% case result['verdict'] %>
+                  <% when 'PASS' %>
+                    <span class="label label-success">PASS</span>
+                  <% when 'FAIL' %>
+                    <span class="label label-danger">FAIL</span>
+                  <% else %>
+                    <span class="label label-default"><%= result['verdict'] %></span>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <h4><%= _('Attestation History') %></h4>
+    <table class="table table-bordered table-striped">
+      <thead>
+        <tr>
+          <th><%= _('Time') %></th>
+          <th><%= _('State') %></th>
+          <th><%= _('Verdict') %></th>
+          <th><%= _('Backends') %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @host.attestation_records.order(received_at: :desc).limit(20).each do |record| %>
+          <tr>
+            <td><%= record.received_at&.strftime('%Y-%m-%d %H:%M:%S') %></td>
+            <td><%= record.arbiter_state %></td>
+            <td>
+              <% if record.passed? %>
+                <span class="label label-success">PASS</span>
+              <% elsif record.failed? %>
+                <span class="label label-danger">FAIL</span>
+              <% else %>
+                <span class="label label-default"><%= record.composite_verdict %></span>
+              <% end %>
+            </td>
+            <td>
+              <% (record.per_backend || []).each do |r| %>
+                <span class="label label-<%= r['verdict'] == 'PASS' ? 'success' : (r['verdict'] == 'FAIL' ? 'danger' : 'default') %>">
+                  <%= r['backend'] %>: <%= r['verdict'] %>
+                </span>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <div class="alert alert-info">
+      <%= _('No attestation data received for this host. Configure Arbiter Hub to send webhooks to this Satellite instance.') %>
+    </div>
+  <% end %>
+</div>

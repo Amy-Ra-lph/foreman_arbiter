@@ -1,0 +1,68 @@
+<div class="container-fluid">
+  <h1><%= _('Attestation Dashboard') %></h1>
+
+  <div class="row">
+    <div class="col-md-4">
+      <div class="panel panel-success">
+        <div class="panel-heading"><h3 class="panel-title"><%= _('Healthy') %></h3></div>
+        <div class="panel-body text-center">
+          <span style="font-size: 3em; font-weight: bold; color: #3c763d;"><%= @summary[:healthy] %></span>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="panel panel-danger">
+        <div class="panel-heading"><h3 class="panel-title"><%= _('Failed') %></h3></div>
+        <div class="panel-body text-center">
+          <span style="font-size: 3em; font-weight: bold; color: #a94442;"><%= @summary[:failed] %></span>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="panel panel-default">
+        <div class="panel-heading"><h3 class="panel-title"><%= _('Total Attested') %></h3></div>
+        <div class="panel-body text-center">
+          <span style="font-size: 3em; font-weight: bold;"><%= @summary[:total] %></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3><%= _('Latest Attestation per Host') %></h3>
+  <table class="table table-bordered table-striped">
+    <thead>
+      <tr>
+        <th><%= _('Host') %></th>
+        <th><%= _('State') %></th>
+        <th><%= _('Verdict') %></th>
+        <th><%= _('Last Attested') %></th>
+        <th><%= _('Backends') %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @records.each do |record| %>
+        <tr class="<%= record.failed? ? 'danger' : (record.passed? ? 'success' : '') %>">
+          <td><%= link_to record.host&.name, host_path(record.host) %></td>
+          <td><%= record.arbiter_state %></td>
+          <td>
+            <% if record.passed? %>
+              <span class="label label-success">PASS</span>
+            <% elsif record.failed? %>
+              <span class="label label-danger">FAIL</span>
+            <% else %>
+              <span class="label label-default"><%= record.composite_verdict %></span>
+            <% end %>
+          </td>
+          <td><%= record.received_at&.strftime('%Y-%m-%d %H:%M:%S') %></td>
+          <td>
+            <% (record.per_backend || []).each do |r| %>
+              <span class="label label-<%= r['verdict'] == 'PASS' ? 'success' : (r['verdict'] == 'FAIL' ? 'danger' : 'default') %>">
+                <%= r['backend'] %>
+              </span>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
