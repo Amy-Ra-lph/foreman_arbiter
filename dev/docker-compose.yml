@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: foreman
+      POSTGRES_PASSWORD: foreman
+      POSTGRES_DB: foreman
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+  foreman:
+    image: quay.io/foreman/foreman:nightly
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgres://foreman:foreman@db:5432/foreman
+      RAILS_ENV: development
+      FOREMAN_FQDN: foreman.local
+      SEED_ADMIN_PASSWORD: changeme
+    volumes:
+      - ../:/opt/foreman_arbiter:z
+      - ./bundler.d:/home/foreman/bundler.d:z
+    ports:
+      - "3000:3000"
+    command: >
+      bash -c "
+        bundle install &&
+        bin/rake db:create db:migrate &&
+        bin/rake db:seed permissions:reset password=changeme &&
+        bin/rails server -b 0.0.0.0 -p 3000
+      "
+
+volumes:
+  pgdata:
