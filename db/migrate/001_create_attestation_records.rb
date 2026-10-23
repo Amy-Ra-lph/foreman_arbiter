@@ -1,5 +1,7 @@
 class CreateAttestationRecords < ActiveRecord::Migration[7.0]
   def change
+    return if table_exists?(:foreman_arbiter_attestation_records)
+
     create_table :foreman_arbiter_attestation_records do |t|
       t.references :host, null: false, foreign_key: { to_table: :hosts }
       t.string :arbiter_workload_id, null: false

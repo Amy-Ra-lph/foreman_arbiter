@@ -1,35 +1,54 @@
 services:
   db:
-    image: postgres:16
+    image: docker.io/library/postgres:16
     environment:
       POSTGRES_USER: foreman
       POSTGRES_PASSWORD: foreman
       POSTGRES_DB: foreman
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U foreman"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   foreman:
     image: quay.io/foreman/foreman:nightly
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    user: "0:0"
     environment:
-      DATABASE_URL: postgres://foreman:foreman@db:5432/foreman
       RAILS_ENV: development
       FOREMAN_FQDN: foreman.local
       SEED_ADMIN_PASSWORD: changeme
+      DISABLE_MIGRATION_CHECK: "true"
     volumes:
-      - ../:/opt/foreman_arbiter:z
-      - ./bundler.d:/home/foreman/bundler.d:z
+      - ../:/opt/foreman_arbiter:ro,z
+      - ./database.yml:/etc/foreman/database.yml:ro,z
     ports:
       - "3000:3000"
+    working_dir: /usr/share/foreman
     command: >
       bash -c "
-        bundle install &&
-        bin/rake db:create db:migrate &&
-        bin/rake db:seed permissions:reset password=changeme &&
-        bin/rails server -b 0.0.0.0 -p 3000
+        cd /opt/foreman_arbiter &&
+        gem build foreman_arbiter.gemspec -o /tmp/foreman_arbiter.gem &&
+        gem install --no-document /tmp/foreman_arbiter.gem &&
+        cp /opt/foreman_arbiter/dev/bundler.d/foreman_arbiter.rb /usr/share/foreman/bundler.d/ &&
+        chown -R foreman:foreman /usr/share/foreman/tmp /usr/share/foreman/log &&
+        rm -f /usr/share/foreman/tmp/pids/server.pid &&
+        cd /usr/share/foreman &&
+        RAILS_ENV=development bin/rails foreman_arbiter:install:migrations 2>/dev/null;
+        chown -R foreman:foreman /usr/share/foreman/db/migrate/ 2>/dev/null;
+        su foreman -s /bin/bash -c '
+          cd /usr/share/foreman &&
+          foreman-rake db:create 2>/dev/null;
+          foreman-rake db:migrate &&
+          foreman-rake db:seed 2>/dev/null;
+          foreman-rake permissions:reset password=changeme 2>/dev/null;
+          /usr/share/foreman/bin/rails server -b 0.0.0.0 -p 3000
+        '
       "
 
 volumes:

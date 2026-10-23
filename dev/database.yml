@@ -1,0 +1,19 @@
+development:
+  adapter: postgresql
+  host: db
+  port: 5432
+  database: foreman
+  username: foreman
+  password: foreman
+  encoding: utf8
+  pool: 10
+
+production:
+  adapter: postgresql
+  host: db
+  port: 5432
+  database: foreman
+  username: foreman
+  password: foreman
+  encoding: utf8
+  pool: 10

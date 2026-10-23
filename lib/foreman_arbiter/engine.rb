@@ -26,9 +26,6 @@ module ForemanArbiter
         role 'Attestation Viewer', [:view_attestation]
         role 'Attestation Manager', [:view_attestation, :manage_attestation]
 
-        # -- Custom host sub-status --
-        register_custom_status ForemanArbiter::AttestationStatus
-
         # -- Menu items --
         sub_menu :top_menu, :attestation_menu, after: :compliance_menu,
                  caption: N_('Attestation') do
@@ -69,6 +66,7 @@ module ForemanArbiter
 
     config.to_prepare do
       Host::Managed.include ForemanArbiter::HostExtensions if defined?(Host::Managed)
+      Foreman::Plugin.find(:foreman_arbiter).register_custom_status(ForemanArbiter::AttestationStatus)
     end
   end
 end
